@@ -32,8 +32,8 @@ public class AiQuizService {
         Note note = noteRepository.findById(noteId)
                 .orElseThrow(() -> new RuntimeException("Note not found"));
 
-        String prompt = "Based on these notes, generate exactly 3 short quiz questions " +
-                "(no answers) to help someone test their recall. Keep each question under 20 words.\n\n" +
+        String prompt = "Based on these notes, generate exactly 5 quiz questions " +
+                "(no answers) to help someone test their recall. Keep each question between 20-30 words.\n\n" +
                 "Notes:\n" + note.getContent();
 
         RestTemplate restTemplate = new RestTemplate();
