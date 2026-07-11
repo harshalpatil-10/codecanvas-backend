@@ -4,6 +4,7 @@ import com.example.codecanvas.dto.*;
 import com.example.codecanvas.entity.*;
 import com.example.codecanvas.service.AiInterviewService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,22 +18,38 @@ public class AiInterviewController {
     private AiInterviewService aiInterviewService;
 
     @PostMapping("/start")
-    public InterviewTurnResponse start(@RequestBody StartInterviewRequest request) {
-        return aiInterviewService.startInterview(request);
+    public ResponseEntity<?> start(@RequestBody StartInterviewRequest request) {
+        try {
+            return ResponseEntity.ok(aiInterviewService.startInterview(request));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping("/{sessionId}/answer")
-    public InterviewTurnResponse answer(@PathVariable Long sessionId, @RequestBody AnswerSubmitRequest request) {
-        return aiInterviewService.submitAnswer(sessionId, request);
+    public ResponseEntity<?> answer(@PathVariable Long sessionId, @RequestBody AnswerSubmitRequest request) {
+        try {
+            return ResponseEntity.ok(aiInterviewService.submitAnswer(sessionId, request));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping("/{sessionId}/report")
-    public List<InterviewQuestion> report(@PathVariable Long sessionId) {
-        return aiInterviewService.getReport(sessionId);
+    public ResponseEntity<?> report(@PathVariable Long sessionId) {
+        try {
+            return ResponseEntity.ok(aiInterviewService.getReport(sessionId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping("/history")
-    public List<InterviewSession> history() {
-        return aiInterviewService.getHistory();
+    public ResponseEntity<?> history() {
+        try {
+            return ResponseEntity.ok(aiInterviewService.getHistory());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
