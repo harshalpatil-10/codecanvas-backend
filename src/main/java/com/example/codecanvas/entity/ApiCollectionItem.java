@@ -4,7 +4,7 @@ import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "api_collection")
+@Table(name = "api_collection", indexes = @Index(name = "idx_apicollection_user_id", columnList = "user_id"))
 public class ApiCollectionItem {
 
     @Id

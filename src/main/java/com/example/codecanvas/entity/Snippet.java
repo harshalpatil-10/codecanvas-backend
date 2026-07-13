@@ -4,7 +4,7 @@ import javax.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "snippets")
+@Table(name = "sql_queries", indexes = @Index(name = "idx_sqlquery_user_id", columnList = "user_id"))
 public class Snippet {
 
     @Id
