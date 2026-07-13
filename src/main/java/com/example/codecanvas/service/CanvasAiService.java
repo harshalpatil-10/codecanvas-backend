@@ -42,28 +42,66 @@ public class CanvasAiService {
         List<String> sources = new ArrayList<>();
 
         List<Note> notes = noteRepository.searchByKeyword(userId, question);
-        for (Note n : notes.stream().limit(2).collect(Collectors.toList())) {
-            context.append("NOTE - ").append(n.getTitle()).append(":\n").append(n.getContent()).append("\n\n");
+        for (Note n : notes.stream().limit(1).collect(Collectors.toList())) {
+        	String content = n.getContent();
+        	if (content.length() > 400) {
+        	    content = content.substring(0, 400) + "...";
+        	}
+
+        	context.append("NOTE - ")
+        	       .append(n.getTitle())
+        	       .append(":\n")
+        	       .append(content)
+        	       .append("\n\n");
             sources.add("Note: " + n.getTitle());
         }
 
         List<Snippet> snippets = snippetRepository.searchByKeyword(userId, question);
-        for (Snippet s : snippets.stream().limit(2).collect(Collectors.toList())) {
-            context.append("SNIPPET - ").append(s.getTitle()).append(" (").append(s.getLanguage()).append("):\n")
-                    .append(s.getCode()).append("\n\n");
+        for (Snippet s : snippets.stream().limit(1).collect(Collectors.toList())) {
+        	String code = s.getCode();
+        	if (code.length() > 300) {
+        	    code = code.substring(0, 300) + "...";
+        	}
+
+        	context.append("SNIPPET - ")
+        	       .append(s.getTitle())
+        	       .append(" (")
+        	       .append(s.getLanguage())
+        	       .append("):\n")
+        	       .append(code)
+        	       .append("\n\n");
             sources.add("Snippet: " + s.getTitle());
         }
 
         List<SqlQuery> queries = sqlQueryRepository.searchByKeyword(userId, question);
-        for (SqlQuery q : queries.stream().limit(2).collect(Collectors.toList())) {
-            context.append("SQL - ").append(q.getTitle()).append(":\n").append(q.getQuery()).append("\n\n");
+        for (SqlQuery q : queries.stream().limit(1).collect(Collectors.toList())) {
+        	String sql = q.getQuery();
+        	if (sql.length() > 300) {
+        	    sql = sql.substring(0, 300) + "...";
+        	}
+
+        	context.append("SQL - ")
+        	       .append(q.getTitle())
+        	       .append(":\n")
+        	       .append(sql)
+        	       .append("\n\n");
             sources.add("SQL: " + q.getTitle());
         }
 
         List<ApiCollectionItem> apis = apiCollectionRepository.searchByKeyword(userId, question);
-        for (ApiCollectionItem a : apis.stream().limit(2).collect(Collectors.toList())) {
-            context.append("API - ").append(a.getMethod()).append(" ").append(a.getUrl()).append(":\n")
-                    .append(a.getDescription()).append("\n\n");
+        for (ApiCollectionItem a : apis.stream().limit(1).collect(Collectors.toList())) {
+        	String desc = a.getDescription();
+        	if (desc != null && desc.length() > 300) {
+        	    desc = desc.substring(0, 300) + "...";
+        	}
+
+        	context.append("API - ")
+        	       .append(a.getMethod())
+        	       .append(" ")
+        	       .append(a.getUrl())
+        	       .append(":\n")
+        	       .append(desc)
+        	       .append("\n\n");
             sources.add("API: " + a.getMethod() + " " + a.getUrl());
         }
 
@@ -77,10 +115,18 @@ public class CanvasAiService {
         RetrievedContext retrieved = retrieveContext(user.getId(), request.getMessage());
 
         StringBuilder prompt = new StringBuilder();
-        prompt.append("You are Canvas AI, a helpful assistant inside a developer's personal knowledge tool called CodeCanvas.\n");
-        prompt.append("Answer the user's question. If relevant content from their saved notes/snippets/SQL/APIs is provided below, ")
-              .append("ground your answer in it and mention which item you used. If nothing relevant is provided, answer generally ")
-              .append("using your own knowledge, and say you didn't find anything saved on this topic.\n\n");
+        prompt.append("You are Canvas AI, an intelligent assistant inside CodeCanvas.\n");
+        prompt.append("Your goal is to provide clear, accurate, and helpful answers like ChatGPT.\n\n");
+
+        prompt.append("If relevant notes, snippets, SQL queries, or APIs from the user's knowledge base are provided:\n");
+        prompt.append("- Use them as context, not as content to copy.\n");
+        prompt.append("- Never paste the entire note or large blocks of text.\n");
+        prompt.append("- Explain the answer naturally in your own words.\n");
+        prompt.append("- Keep the response concise and easy to understand.\n");
+        prompt.append("- Include examples or code only when useful or when the user requests them.\n");
+        prompt.append("- Mention which saved item(s) you referred to at the end of your answer.\n\n");
+
+        prompt.append("If no relevant saved content exists, answer using your general knowledge and mention that no related saved content was found.\n\n");
 
         if (!retrieved.context.trim().isEmpty()) {
             prompt.append("--- User's relevant saved content ---\n").append(retrieved.context).append("--- end ---\n\n");
