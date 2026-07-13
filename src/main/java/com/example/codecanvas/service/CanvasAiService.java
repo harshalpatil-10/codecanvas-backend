@@ -38,70 +38,112 @@ public class CanvasAiService {
     // Retrieval step: pull the most relevant saved content for this question,
     // reusing the same search queries built for the Search feature.
     private RetrievedContext retrieveContext(Long userId, String question) {
+
         StringBuilder context = new StringBuilder();
         List<String> sources = new ArrayList<>();
 
-        List<Note> notes = noteRepository.searchByKeyword(userId, question);
-        for (Note n : notes.stream().limit(1).collect(Collectors.toList())) {
-        	String content = n.getContent();
-        	if (content.length() > 400) {
-        	    content = content.substring(0, 400) + "...";
-        	}
+        // Remove punctuation
+        String cleaned = question.toLowerCase()
+                .replaceAll("[^a-zA-Z0-9 ]", " ");
 
-        	context.append("NOTE - ")
-        	       .append(n.getTitle())
-        	       .append(":\n")
-        	       .append(content)
-        	       .append("\n\n");
+        // Common words to ignore
+        Set<String> stopWords = new HashSet<>(Arrays.asList(
+                "what","is","are","the","a","an","about","tell","me","explain",
+                "how","to","give","please","can","you","define","of","for",
+                "in","on","my","do","does","did","why","when","where"
+        ));
+
+        // Extract useful keywords
+        List<String> keywords = Arrays.stream(cleaned.split("\\s+"))
+                .filter(word -> word.length() > 2)
+                .filter(word -> !stopWords.contains(word))
+                .distinct()
+                .collect(Collectors.toList());
+
+        Set<Note> noteResults = new LinkedHashSet<>();
+        Set<Snippet> snippetResults = new LinkedHashSet<>();
+        Set<SqlQuery> sqlResults = new LinkedHashSet<>();
+        Set<ApiCollectionItem> apiResults = new LinkedHashSet<>();
+
+        for (String keyword : keywords) {
+
+            noteResults.addAll(noteRepository.searchByKeyword(userId, keyword));
+
+            snippetResults.addAll(
+                    snippetRepository.searchByKeyword(userId, keyword));
+
+            sqlResults.addAll(
+                    sqlQueryRepository.searchByKeyword(userId, keyword));
+
+            apiResults.addAll(
+                    apiCollectionRepository.searchByKeyword(userId, keyword));
+        }
+
+        for (Note n : noteResults.stream().limit(1).collect(Collectors.toList())) {
+
+            String content = n.getContent();
+
+            if(content.length() > 400)
+                content = content.substring(0,400) + "...";
+
+            context.append("NOTE - ")
+                    .append(n.getTitle())
+                    .append(":\n")
+                    .append(content)
+                    .append("\n\n");
+
             sources.add("Note: " + n.getTitle());
         }
 
-        List<Snippet> snippets = snippetRepository.searchByKeyword(userId, question);
-        for (Snippet s : snippets.stream().limit(1).collect(Collectors.toList())) {
-        	String code = s.getCode();
-        	if (code.length() > 300) {
-        	    code = code.substring(0, 300) + "...";
-        	}
+        for (Snippet s : snippetResults.stream().limit(1).collect(Collectors.toList())) {
 
-        	context.append("SNIPPET - ")
-        	       .append(s.getTitle())
-        	       .append(" (")
-        	       .append(s.getLanguage())
-        	       .append("):\n")
-        	       .append(code)
-        	       .append("\n\n");
+            String code = s.getCode();
+
+            if(code.length() > 300)
+                code = code.substring(0,300) + "...";
+
+            context.append("SNIPPET - ")
+                    .append(s.getTitle())
+                    .append(" (")
+                    .append(s.getLanguage())
+                    .append("):\n")
+                    .append(code)
+                    .append("\n\n");
+
             sources.add("Snippet: " + s.getTitle());
         }
 
-        List<SqlQuery> queries = sqlQueryRepository.searchByKeyword(userId, question);
-        for (SqlQuery q : queries.stream().limit(1).collect(Collectors.toList())) {
-        	String sql = q.getQuery();
-        	if (sql.length() > 300) {
-        	    sql = sql.substring(0, 300) + "...";
-        	}
+        for (SqlQuery q : sqlResults.stream().limit(1).collect(Collectors.toList())) {
 
-        	context.append("SQL - ")
-        	       .append(q.getTitle())
-        	       .append(":\n")
-        	       .append(sql)
-        	       .append("\n\n");
+            String sql = q.getQuery();
+
+            if(sql.length() > 300)
+                sql = sql.substring(0,300) + "...";
+
+            context.append("SQL - ")
+                    .append(q.getTitle())
+                    .append(":\n")
+                    .append(sql)
+                    .append("\n\n");
+
             sources.add("SQL: " + q.getTitle());
         }
 
-        List<ApiCollectionItem> apis = apiCollectionRepository.searchByKeyword(userId, question);
-        for (ApiCollectionItem a : apis.stream().limit(1).collect(Collectors.toList())) {
-        	String desc = a.getDescription();
-        	if (desc != null && desc.length() > 300) {
-        	    desc = desc.substring(0, 300) + "...";
-        	}
+        for (ApiCollectionItem a : apiResults.stream().limit(1).collect(Collectors.toList())) {
 
-        	context.append("API - ")
-        	       .append(a.getMethod())
-        	       .append(" ")
-        	       .append(a.getUrl())
-        	       .append(":\n")
-        	       .append(desc)
-        	       .append("\n\n");
+            String desc = a.getDescription();
+
+            if(desc != null && desc.length() > 300)
+                desc = desc.substring(0,300) + "...";
+
+            context.append("API - ")
+                    .append(a.getMethod())
+                    .append(" ")
+                    .append(a.getUrl())
+                    .append(":\n")
+                    .append(desc)
+                    .append("\n\n");
+
             sources.add("API: " + a.getMethod() + " " + a.getUrl());
         }
 
@@ -126,7 +168,7 @@ public class CanvasAiService {
         prompt.append("- Include examples or code only when useful or when the user requests them.\n");
         prompt.append("- Mention which saved item(s) you referred to at the end of your answer.\n\n");
 
-        prompt.append("If no relevant saved content exists, answer using your general knowledge and mention that no related saved content was found.\n\n");
+        prompt.append("If no relevant saved content exists, simply answer the question using your own knowledge. Do not mention that no saved content was found unless the user specifically asks whether they have saved notes about the topic.\n\n");
 
         if (!retrieved.context.trim().isEmpty()) {
             prompt.append("--- User's relevant saved content ---\n").append(retrieved.context).append("--- end ---\n\n");
